@@ -674,3 +674,36 @@ class ShareableProjectScopedFilterModel(ProjectScopedFilterModel):
             )
             return and_(base_filter, user_filter)
         return base_filter
+
+
+def filter_model(_cls: Type[BaseFilterModel]) -> Type[BaseFilterModel]:
+    """Adjust the fields of a filter model to be suitable for filtering.
+
+    This sets all fields that can be used for filtering as optional with
+    with default None and turns their typing into
+    `Optional[Union[str, <TYPE>]]`.
+
+    Args:
+        _cls: The class to decorate.
+
+    Returns:
+        The decorated class.
+    """
+    # TODO: Just overriding fields does not work because `make_dependable` uses
+    # the signature. Either override the pydantic meta class or dynamically
+    # create a new class with the correct signature below.
+
+    # Adjust all fields that are not explicitly excluded from filtering.
+    for key, value in _cls.__fields__.items():
+        if key not in _cls.FILTER_EXCLUDE_FIELDS:
+
+            # Set required to False and allow None
+            value.required = False
+            value.allow_none = True
+            value.default = None
+
+            # Set type to `Optional[Union[str, <TYPE>]]`
+            value.type_ = Union[str, value.type_, None]
+            value.outer_type_ = value.type_
+
+    return _cls
